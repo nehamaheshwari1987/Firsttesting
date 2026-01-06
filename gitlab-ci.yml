@@ -1,0 +1,49 @@
+#You can use this file as-is or modify as needed to help students learn more effectively. 
+
+
+
+
+# Specify the Docker image to use for all jobs. This ensures that each job runs in a consistent environment.
+image: python:3.10 
+
+# Define the stages of the pipeline. Jobs in the same stage will run in parallel, while stages run sequentially.
+stages:
+  - build     # First, we build the environment and dependencies.
+  - test      # Next, we test the code to ensure functionality.
+  - deploy    # Finally, we deploy the application if tests pass.
+
+# Define variables that can be used across jobs in the pipeline.
+variables:
+  VENV_DIR: .venv  # Set the directory where the virtual environment will be created.
+
+# Build job: responsible for setting up the environment and installing dependencies.
+build:
+  stage: build                    # Specify that this job belongs to the "build" stage.
+  script:
+    - python -m venv $VENV_DIR    # Create a virtual environment in the specified directory.
+    - source $VENV_DIR/bin/activate # Activate the virtual environment.
+    - pip install -r requirements.txt # Install all dependencies from requirements.txt.
+  artifacts:
+    paths:
+      - $VENV_DIR                 # Save the virtual environment as an artifact for future jobs. GitLab uses American Spelling, so it's artifacts and not artefacts. 
+    expire_in: 1 hour             # Set how long this artifact will be retained (useful for caching).
+
+# Test job: uses the virtual environment from the build stage to run tests.
+test:
+  stage: test                     # This job is part of the "test" stage.
+  dependencies:
+    - build                       # Specify that this job depends on the build stage and will use its artifact.
+  script:
+    - source $VENV_DIR/bin/activate # Activate the virtual environment.
+    - echo "Running tests in $FLASK_ENV mode" # Optional echo statement for logging.
+    - python -m unittest discover -s . -p "test_*.py"  # Run all test files that match the pattern "test_*.py".
+
+# Deploy job: final step to deploy the application.
+deploy:
+  stage: deploy                   # Specify that this job is in the "deploy" stage.
+  dependencies:
+    - build                       # Use the virtual environment artifact from the build stage.
+  script:
+    - source $VENV_DIR/bin/activate # Activate the virtual environment.
+    - echo "Deploying in $FLASK_ENV mode" # Optional echo statement for logging.
+    - echo "App deployed successfully!" # Replace this line with actual deployment commands. It could be any cloud service such as AWS, GCP, Azure etc.
